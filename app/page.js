@@ -1,9 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import swap from "./assets/swap.svg";
 import Image from "next/image";
 import plus from "./assets/plus.png";
-import { useSearchParams } from "next/navigation";
 
 export default function Page() {
   // State variables for the form inputs
@@ -15,8 +14,35 @@ export default function Page() {
   const [walletAddress, setWalletAddress] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const [accountId, setAccountId] = useState("");
+  const [activePopup, setActivePopup] = useState(null); // Track active popup
+  const ethPopupRef = useRef(null); // Ref for ETH popup
+  const btcPopupRef = useRef(null); // Ref for BTC popup
 
-  // Event handlers for form inputs
+  useEffect(() => {
+    // Close popup on outside click
+    const handleClickOutside = (event) => {
+      if (
+        ethPopupRef.current &&
+        !ethPopupRef.current.contains(event.target) &&
+        activePopup === "eth"
+      ) {
+        setActivePopup(null);
+      }
+      if (
+        btcPopupRef.current &&
+        !btcPopupRef.current.contains(event.target) &&
+        activePopup === "btc"
+      ) {
+        setActivePopup(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [activePopup]);
+
   const handleSendAmountChange = (e) => {
     setSendAmount(e.target.value);
   };
@@ -26,6 +52,21 @@ export default function Page() {
       setAccountId("");
     }
   };
+
+  const openEthPopup = () => {
+    setActivePopup("eth");
+  };
+
+  const openBtcPopup = () => {
+    setActivePopup("btc");
+  };
+  const closeBtcPopup = () => {
+    setActivePopup(null);
+  };
+  const closeEthPopup = () => {
+    setActivePopup(null);
+  };
+
   const handleReceiveAmountChange = (e) => {
     setReceiveAmount(e.target.value);
   };
@@ -37,6 +78,7 @@ export default function Page() {
   const handleLowerFeesButtonClick = () => {
     setShowPopup(true);
   };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     // Logic to handle form submission
@@ -46,11 +88,13 @@ export default function Page() {
       // Proceed with swapping logic
     }
   };
+
   const handleWalletAddressFocus = () => {
     if (walletAddress === "") {
-      setWalletAddress(""); // Clearing the field when clicked if it's empty
+      setWalletAddress("");
     }
   };
+
   const handleAddSwap = () => {
     if (!sendAmount || !walletAddress) {
       alert("Please input the amount and wallet address.");
@@ -137,7 +181,7 @@ export default function Page() {
       )}
 
       {/* Private/Semi-private toggle */}
-      <div className="flex justify-center items-center my-4">
+      <div className="flex justify-center items-center my-2 ">
         <button
           className={`${
             privateOption === "Private" ? "font-bold" : "font-semibold"
@@ -156,8 +200,9 @@ export default function Page() {
         >
           <input type="checkbox" id="check" className="sr-only peer" />
           <span
-            className="w-2/5 h-4/5 bg-white absolute rounded-full
-left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 duration-500"
+            className={`w-4 h-4 bg-white absolute rounded-full left-1 top-1 bottom-2 peer-checked:left-7 transition-all peer-checked:bg-green-400 duration-500 ${
+              exactOption === "Exact" ? "left-7" : "left-1"
+            }`}
           ></span>
         </label>
 
@@ -175,7 +220,7 @@ left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 dura
       </div>
 
       {/* Variable/Exact toggle */}
-      <div className="flex justify-center items-center my-4">
+      <div className="flex justify-center items-center my-2">
         <button
           className={`${
             exactOption === "Variable" ? "font-normal" : "font-bold"
@@ -193,8 +238,8 @@ left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 dura
         >
           <input type="checkbox" id="checkbox" className="sr-only peer" />
           <span
-            className={`w-2/5 h-4/5 bg-white absolute rounded-full left-1 top-1 peer-checked:left-6 transition-all peer-checked:bg-yellow-200 duration-500 ${
-              exactOption === "Exact" ? "left-6" : "left-1"
+            className={`w-4 h-4 bg-white absolute rounded-full left-1 top-1 bottom-2 peer-checked:left-7 transition-all peer-checked:bg-green-400 duration-500 ${
+              exactOption === "Exact" ? "left-7" : "left-1"
             }`}
           ></span>
         </label>
@@ -210,7 +255,7 @@ left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 dura
       </div>
 
       {/* Send and Receive inputs */}
-      <div className="flex justify-center items-center bg-customGray h-32 w-5/6 px-6 rounded-xl ">
+      <div className="flex sm:flex-col justify-center items-center bg-customGray h-32 w-5/6 px-6 rounded-xl relative">
         <label htmlFor="sendAmount" className="mr-2 font-medium text-white">
           Send:
         </label>
@@ -222,9 +267,31 @@ left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 dura
           placeholder="send amount"
           className="mr-4 h-12 text-white  bg-customGray rounded-lg "
         />
-
-        <span className="text-white">ETH(ERC-20) v</span>
+        <span
+          className="text-white cursor-pointer hover:font-bold"
+          onClick={openEthPopup} // Open ETH popup when clicked
+          style={{ textDecoration: "none" }}
+        >
+          ETH(ERC-20)
+        </span>
+        {activePopup === "eth" && (
+          <div
+            ref={ethPopupRef}
+            className="absolute z-20 mt-80 border-2 border-black pt-2 px-96 bg-gray-400 h-52 w-full rounded-md overflow-y-auto "
+          >
+            {/* ETH Popup content */}
+            {/* Add your selection options and search field here */}
+            <button
+              onClick={closeEthPopup}
+              className="bg-black hover:font-bold"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Swap button */}
       <div className="flex justify-center items-center ">
         <Image
           src={swap}
@@ -232,6 +299,8 @@ left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 dura
           className="h-9 w-9 z-10 bg-white rounded-md cursor-pointer transition duration-300 transform hover:rotate-180"
         />
       </div>
+
+      {/* Receive input */}
       <div className="flex justify-center items-center mb-4 bg-customGray h-32 w-5/6 px-6 rounded-xl">
         <label htmlFor="receiveAmount" className="ml-2 mr-2 text-white ">
           Receive:
@@ -244,16 +313,34 @@ left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 dura
           placeholder="receive amount"
           className="text-white  bg-customGray mr-4 h-12 rounded-lg "
         />
-        <span className="text-white">BTC v</span>
+
+        <span
+          className="text-white cursor-pointer hover:font-bold"
+          onClick={openBtcPopup} // Open BTC popup when clicked
+          style={{ textDecoration: "none" }}
+        >
+          BTC
+        </span>
+        {activePopup === "btc" && (
+          <div
+            ref={btcPopupRef}
+            className="absolute z-20 mt-80 bg-gray-400 h-52 w-5/6 rounded-md border-2 border-black pt-2 px-96 overflow-y-auto "
+          >
+            {/* BTC Popup content */}
+            {/* Add your selection options and search field here */}
+            <button
+              onClick={closeBtcPopup}
+              className="bg-black hover:font-bold"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Wallet Address input */}
       <div className="justify-center items-center mb-4 bg-customGray h-32 w-5/6 px-6 rounded-xl  mt-4 pt-3">
-        <label
-          htmlFor="walletAddress"
-          className="block text-white mb-2"
-          style={{ fontSize: "1rem" }}
-        >
+        <label htmlFor="walletAddress" className="block text-white mb-2">
           Receiving Wallet (BTC) Address:
         </label>
         <div className="relative">
@@ -268,10 +355,10 @@ left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 dura
             style={{ fontSize: "1.30rem" }}
           />
           <span
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer"
+            className="   text-gray-400 cursor-pointer"
             onClick={() => setWalletAddress("")}
           >
-            &#x2715;
+            {/* &#x2715; */}
           </span>
         </div>
       </div>
@@ -305,7 +392,7 @@ left-1 top-1  peer-checked:left-6 transition-all peer-checked:bg-yellow-200 dura
         </div>
       )}
 
-      <div className="flex justify-center items-center my-6 h-10 ">
+      <div className="flex justify-center items-center my-6 h-10 w-full ">
         <span className="mr-2 text-white">Account ID:</span>
         <input
           type="text"

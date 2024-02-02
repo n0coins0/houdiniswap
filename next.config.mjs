@@ -1,4 +1,15 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+// next.config.mjs
+
+const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://api.xblock.tech/:path*", // Proxy to API
+      },
+    ];
+  },
+};
 
 export default nextConfig;
